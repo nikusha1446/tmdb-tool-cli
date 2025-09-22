@@ -1,17 +1,22 @@
 import 'dotenv/config';
 import axios from 'axios';
+import { Command } from 'commander';
+
+const program = new Command();
+
+const typeMapping = {
+  playing: 'now_playing',
+  popular: 'popular',
+  top: 'top_rated',
+  upcoming: 'upcoming',
+};
 
 const fetchMoviesData = async (type) => {
   const apiKey = process.env.TMDB_API_KEY;
 
   if (!apiKey) {
     console.error('Error: TMDB_API_KEY not found in .env file');
-    return;
-  }
-
-  if (!type) {
-    console.error('Error: Movie type is required');
-    return;
+    process.exit(1);
   }
 
   const url = `https://api.themoviedb.org/3/movie/${type}?language=en-US&page=1&api_key=${apiKey}`;
@@ -19,7 +24,8 @@ const fetchMoviesData = async (type) => {
     const response = await axios.get(url);
     formatMovies(response.data);
   } catch (error) {
-    console.error(error);
+    console.error('Error:', error.message);
+    process.exit(1);
   }
 };
 
@@ -48,3 +54,21 @@ const formatMovies = (data) => {
     console.log('');
   });
 };
+
+program
+  .name('tmdb-app-cli')
+  .description('Fetch movies from The Movie Database')
+  .requiredOption(
+    '--type <type>',
+    'type of movies to fetch (playing, popular, top, upcoming'
+  )
+  .action((options) => {
+    if (!['playing', 'popular', 'top', 'upcoming'].includes(options.type)) {
+      console.log('Error: --type must be playing, popular, top or upcoming');
+      process.exit(1);
+    }
+
+    fetchMoviesData(typeMapping[options.type]);
+  });
+
+program.parse();
